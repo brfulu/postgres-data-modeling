@@ -1,15 +1,15 @@
 # postgres-data-modeling
-#### Udacity Data Engineer Nanodegree project
+### Udacity Data Engineer Nanodegree project
 An imaginery startup called Sparkify wants to analyze the data they've been collecting on songs and user activity on their new music streaming app. The analytics team is particularly interested in understanding what songs users are listening to. Currently, they don't have an easy way to query their data, which resides in a directory of JSON logs on user activity on the app, as well as a directory with JSON metadata on the songs in their app.
 
 They'd like a data engineer to create a Postgres database with tables designed to optimize queries on song play analysis. The task is to create a star schema for Postgres and develop an ETL pipleine which will transfer the data from local files to the database.
 
-#### Requirements for running locally
+### Requirements for running locally
 - Python3 
 - Docker
 - Docker-Compose 
 
-#### Project structure explanation
+### Project structure explanation
 ```
 postgres-data-modeling
 │   README.md                # Project description
@@ -34,7 +34,7 @@ postgres-data-modeling
 |       |  sql_queries.py   # Definition of all sql queries
 ```
 
-#### Instructions for running locally
+### Instructions for running locally
 
 Clone repository to local machine
 ```
