@@ -38,7 +38,7 @@ song_table_create = ("""
         title VARCHAR,
         artist_id VARCHAR,
         year INT,
-        duration FLOAT
+        duration INT
     );
 """)
 
