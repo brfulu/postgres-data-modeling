@@ -12,3 +12,6 @@ __pycache__/
 # Jupyter notebooks
 .ipynb_checkpoints
 */.ipynb_checkpoints/*
+
+# Postgres volume backup
+postgres-data/
