@@ -1,7 +1,7 @@
 import os
 import glob
 import psycopg2
-from src.sql_queries import *
+from modeling.sql_queries import *
 
 
 def process_song_file(cur, filepath):
