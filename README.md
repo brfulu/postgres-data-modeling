@@ -48,9 +48,9 @@ cd path/to/local/repo
 
 Create python virtual environment
 ```
-python3 -m venv venv  # create virtualenv
-source venv/bin/activate  # activate virtualenv
-pip install -r requirements.txt # install requirements
+python3 -m venv venv             # create virtualenv
+source venv/bin/activate         # activate virtualenv
+pip install -r requirements.txt  # install requirements
 ```
 
 Start postgres container
@@ -62,5 +62,5 @@ Run scripts
 ```
 cd src/
 python -m scripts.create_tables  # create schema
-python -m scripts.etl  # load data
+python -m scripts.etl            # load data
 ```
