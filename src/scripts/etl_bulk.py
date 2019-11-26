@@ -6,17 +6,17 @@ import pandas as pd
 import numpy as np
 from scripts.sql_queries import *
 
-bulk_df_dict = {
+bulk_song_df_dict = {
     'songs': pd.DataFrame(columns=['song_id', 'title', 'artist_id', 'year', 'duration']),
     'artists': pd.DataFrame(columns=['artist_id', 'name', 'location', 'latitude', 'longitude'])
 }
 
-
-def copy_dataframe_to_db(cur, df, table):
-    sio = io.StringIO()
-    sio.write(df.to_csv(index=None, header=None))  # Write the Pandas DataFrame as a csv to the buffer
-    sio.seek(0)  # Be sure to reset the position to the start of the stream
-    cur.copy_from(sio, table, columns=df.columns, sep=',', null='None')
+bulk_log_df_dict = {
+    'time': pd.DataFrame(columns=['start_time', 'hour', 'day', 'week', 'month', 'year', 'weekday']),
+    'users': pd.DataFrame(columns=['user_id', 'first_name', 'last_name', 'gender', 'level']),
+    'songplays': pd.DataFrame(columns=['start_time', 'user_id', 'level', 'song_id', 'artist_id', \
+                                       'session_id', 'location', 'user_agent']),
+}
 
 
 def process_song_file(cur, filepath):
@@ -28,14 +28,14 @@ def process_song_file(cur, filepath):
     # Round the duration to the closest second
     df['duration'] = int(round(df['duration']))
 
-    # insert song record
+    # append song record
     song_df = df[['song_id', 'title', 'artist_id', 'year', 'duration']]
-    bulk_df_dict['songs'] = bulk_df_dict['songs'].append(song_df, sort=False)
+    bulk_song_df_dict['songs'] = bulk_song_df_dict['songs'].append(song_df, sort=False)
 
-    # insert artist record
+    # append artist record
     artist_df = df[['artist_id', 'artist_name', 'artist_location', 'artist_latitude', 'artist_longitude']]
     artist_df.columns = ['artist_id', 'name', 'location', 'latitude', 'longitude']
-    bulk_df_dict['artists'] = bulk_df_dict['artists'].append(artist_df, sort=False)
+    bulk_song_df_dict['artists'] = bulk_song_df_dict['artists'].append(artist_df, sort=False)
 
 
 def process_log_file(cur, filepath):
@@ -48,25 +48,25 @@ def process_log_file(cur, filepath):
     # convert timestamp column to datetime
     t = pd.to_datetime(df['ts'], unit='ms')
 
-    # insert time data records
-    time_data = [(round(dt.timestamp()), dt.hour, dt.day, dt.week, dt.month, dt.year, dt.day_name()) for dt in t]
-    column_labels = ('timestamp', 'hour', 'day', 'week', 'month', 'year', 'weekday')
+    # append time data records
+    time_data = [(dt, dt.hour, dt.day, dt.week, dt.month, dt.year, dt.day_name()) for dt in t]
+    column_labels = ('start_time', 'hour', 'day', 'week', 'month', 'year', 'weekday')
     time_df = pd.DataFrame(time_data, columns=column_labels)
+    bulk_log_df_dict['time'] = bulk_log_df_dict['time'].append(time_df)
 
-    copy_dataframe_to_db(cur, time_df, 'time')
-
-    # insert user records
+    # append user records
     user_df = df[['userId', 'firstName', 'lastName', 'gender', 'level']]
     user_df = user_df[user_df['userId'].astype(bool)]
+    user_df['userId'] = df['userId'].astype(str)
     user_df = user_df.drop_duplicates(subset='userId')
-
-    copy_dataframe_to_db(cur, user_df, 'users')
+    user_df.columns = ['user_id', 'first_name', 'last_name', 'gender', 'level']
+    bulk_log_df_dict['users'] = bulk_log_df_dict['users'].append(user_df)
 
     # insert songplay records
     rows_list = []
     for index, row in df.iterrows():
         # get song_id and artist_id from song and artist tables
-        cur.execute(song_select, (row.song, row.artist, round(row.length)))
+        cur.execute(song_select, (row.song, row.artist, int(round(row.length))))
         result = cur.fetchone()
         (song_id, artist_id) = (result if result else (None, None))
 
@@ -75,7 +75,7 @@ def process_log_file(cur, filepath):
         #     continue
 
         rows_list.append({
-            'start_time': round(row.ts / 1000.0),
+            'start_time': pd.to_datetime(round(row.ts / 1000.0)),
             'user_id': row.userId,
             'level': row.level,
             'song_id': song_id,
@@ -86,10 +86,10 @@ def process_log_file(cur, filepath):
         })
 
     songplay_df = pd.DataFrame(rows_list)
-    copy_dataframe_to_db(cur, songplay_df, 'songplays')
+    bulk_log_df_dict['songplays'] = bulk_log_df_dict['songplays'].append(songplay_df)
 
 
-def process_data(cur, conn, filepath, process_func):
+def process_data(cur, filepath, func):
     # get all files matching extension from directory
     all_files = []
     for root, dirs, files in os.walk(filepath):
@@ -103,9 +103,23 @@ def process_data(cur, conn, filepath, process_func):
 
     # iterate over files and process
     for i, datafile in enumerate(all_files, 1):
-        process_func(cur, datafile)
-        conn.commit()
+        func(cur, datafile)
         print('{}/{} files processed.'.format(i, num_files))
+
+
+def copy_dataframe_to_db(cur, df, table):
+    sio = io.StringIO()
+    sio.write(df.to_csv(index=None, header=None, na_rep='NULL', sep='|'))  # Write the DataFrame as a csv to the buffer
+    sio.seek(0)  # Be sure to reset the position to the start of the stream
+    # print(sio.getvalue())
+    cur.copy_from(sio, table, columns=df.columns, sep='|', null='NULL')
+
+
+def copy_dataframes_to_db(conn, cur, df_dict):
+    for table, df in df_dict.items():
+        df.replace('', 'NULL', inplace=True)
+        copy_dataframe_to_db(cur, df, table)
+        conn.commit()
 
 
 def main():
@@ -114,18 +128,15 @@ def main():
     conn = psycopg2.connect("host=127.0.0.1 dbname=sparkifydb user=student password=student")
     cur = conn.cursor()
 
-    process_data(cur, conn, filepath='../data/song_data', process_func=process_song_file)
-    # process_data(cur, conn, filepath='../data/log_data', func=process_log_file)
+    process_data(cur, filepath='../data/song_data', func=process_song_file)
+    bulk_song_df_dict['artists'].drop_duplicates(subset='artist_id', keep='first', inplace=True)
+    copy_dataframes_to_db(conn, cur, bulk_song_df_dict)
 
-    for table, df in bulk_df_dict.items():
-        print(table)
-        print(len(df))
-        df.replace('""', np.nan, inplace=True)
-        if 'latitude' in df:
-            print(df)
-        copy_dataframe_to_db(cur, df, table)
+    process_data(cur, filepath='../data/log_data', func=process_log_file)
+    bulk_log_df_dict['users'].drop_duplicates(subset='user_id', keep='first', inplace=True)
+    bulk_log_df_dict['time'].drop_duplicates(subset='start_time', keep='first', inplace=True)
+    copy_dataframes_to_db(conn, cur, bulk_log_df_dict)
 
-    # bulk_artist_df = bulk_artist_df.drop_duplicates(subset='artist_id')
 
     conn.close()
 
