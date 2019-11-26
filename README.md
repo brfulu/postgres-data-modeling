@@ -62,5 +62,6 @@ Run scripts
 ```
 cd src/
 python -m scripts.create_tables  # create schema
-python -m scripts.etl            # load data
+python -m scripts.etl            # option 1: load data one file per commit
+python -m scripts.bulk_etl       # option 2: bulk copy for each table
 ```

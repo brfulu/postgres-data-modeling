@@ -3,6 +3,16 @@ from scripts.sql_queries import create_table_queries, drop_table_queries
 
 
 def create_database():
+    """Creates the sparkifydb database and opens a database connection
+
+    Args:
+        None
+
+    Returns:
+        cur: psycopg2 cursor object
+        conn: psycopg2 connection objecct
+    """
+
     # connect to default database
     conn = psycopg2.connect("host=127.0.0.1 dbname=studentdb user=student password=student")
     conn.set_session(autocommit=True)
@@ -23,22 +33,52 @@ def create_database():
 
 
 def drop_tables(cur, conn):
+    """Executes drop_table_queries from sql_queries.py
+
+    Args:
+        cur: psycopg2 cursor object
+        conn: psycopg2 connection objecct
+
+    Returns:
+        None
+    """
+
     for query in drop_table_queries:
         cur.execute(query)
         conn.commit()
 
 
 def create_tables(cur, conn):
+    """Executes create_table_queries from sql_queries.py
+
+    Args:
+        cur: psycopg2 cursor object
+        conn: psycopg2 connection objecct
+
+    Returns:
+        None
+    """
+
     for query in create_table_queries:
         cur.execute(query)
         conn.commit()
 
 
 def main():
+    """Script entry point
+
+    Args:
+        None
+
+    Returns:
+        None
+    """
+
     cur, conn = create_database()
 
     drop_tables(cur, conn)
     create_tables(cur, conn)
+
     print('Tables created.')
     conn.close()
 

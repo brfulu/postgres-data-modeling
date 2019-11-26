@@ -3,7 +3,6 @@ import io
 import glob
 import psycopg2
 import pandas as pd
-import numpy as np
 from scripts.sql_queries import *
 
 bulk_song_df_dict = {
@@ -20,7 +19,16 @@ bulk_log_df_dict = {
 
 
 def process_song_file(cur, filepath):
-    global bulk_df_dict
+    """Process and append data from one song file to in-memory song dataframe
+
+    Args:
+        cur: psycopg2 cursor
+        filepath: path of log file
+
+    Returns:
+        None
+    """
+    global bulk_song_df_dict
 
     # open song file
     df = pd.read_json(filepath, lines=True)
@@ -39,6 +47,17 @@ def process_song_file(cur, filepath):
 
 
 def process_log_file(cur, filepath):
+    """Process and append data from one log file to in-memory log dataframe
+
+    Args:
+        cur: psycopg2 cursor
+        filepath: path of log file
+
+    Returns:
+        None
+    """
+    global bulk_log_df_dict
+
     # open log file
     df = pd.read_json(filepath, lines=True)
 
@@ -62,7 +81,7 @@ def process_log_file(cur, filepath):
     user_df.columns = ['user_id', 'first_name', 'last_name', 'gender', 'level']
     bulk_log_df_dict['users'] = bulk_log_df_dict['users'].append(user_df)
 
-    # insert songplay records
+    # append songplay records
     rows_list = []
     for index, row in df.iterrows():
         # get song_id and artist_id from song and artist tables
@@ -90,6 +109,16 @@ def process_log_file(cur, filepath):
 
 
 def process_data(cur, filepath, func):
+    """Process data recursively from filepath directory location
+
+    Args:
+        cur: psycopg2 cursor
+        filepath: root directory path
+        func: function for file processing
+
+    Returns:
+        None
+    """
     # get all files matching extension from directory
     all_files = []
     for root, dirs, files in os.walk(filepath):
@@ -108,14 +137,34 @@ def process_data(cur, filepath, func):
 
 
 def copy_dataframe_to_db(cur, df, table):
+    """Copies data from a dataframe to postgres with table as table name
+
+    Args:
+        cur: psycopg2 cursor
+        df: dataframe to be copied
+        table: postgres destination table name
+
+    Returns:
+        None
+    """
     sio = io.StringIO()
-    sio.write(df.to_csv(index=None, header=None, na_rep='NULL', sep='|'))  # Write the DataFrame as a csv to the buffer
-    sio.seek(0)  # Be sure to reset the position to the start of the stream
-    # print(sio.getvalue())
+    sio.write(df.to_csv(index=None, header=None, na_rep='NULL', sep='|'))
+    # reset the position to the start of the stream
+    sio.seek(0)
     cur.copy_from(sio, table, columns=df.columns, sep='|', null='NULL')
 
 
-def copy_dataframes_to_db(conn, cur, df_dict):
+def copy_dataframes_to_db(cur, conn, df_dict):
+    """Copies data from every dataframe in df_dict to postgres with dictionary key as table name
+
+    Args:
+        cur: psycopg2 cursor
+        conn: psycopg2 connection
+        df_dict: dictionary of dataframes to be copied
+
+    Returns:
+        None
+    """
     for table, df in df_dict.items():
         df.replace('', 'NULL', inplace=True)
         copy_dataframe_to_db(cur, df, table)
@@ -123,20 +172,26 @@ def copy_dataframes_to_db(conn, cur, df_dict):
 
 
 def main():
-    global bulk_df_dict
+    """Script entry point
 
+    Args:
+
+    Returns:
+        None
+    """
     conn = psycopg2.connect("host=127.0.0.1 dbname=sparkifydb user=student password=student")
     cur = conn.cursor()
 
+    # process song files
     process_data(cur, filepath='../data/song_data', func=process_song_file)
     bulk_song_df_dict['artists'].drop_duplicates(subset='artist_id', keep='first', inplace=True)
-    copy_dataframes_to_db(conn, cur, bulk_song_df_dict)
+    copy_dataframes_to_db(cur, conn, bulk_song_df_dict)
 
+    # process log files
     process_data(cur, filepath='../data/log_data', func=process_log_file)
     bulk_log_df_dict['users'].drop_duplicates(subset='user_id', keep='first', inplace=True)
     bulk_log_df_dict['time'].drop_duplicates(subset='start_time', keep='first', inplace=True)
-    copy_dataframes_to_db(conn, cur, bulk_log_df_dict)
-
+    copy_dataframes_to_db(cur, conn, bulk_log_df_dict)
 
     conn.close()
 
