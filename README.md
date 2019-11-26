@@ -43,7 +43,7 @@ git clone https://github.com/brfulu/postgres-data-modeling.git
 
 Change directory to local repository
 ```
-cd path/to/local/repo
+cd postgres-data-modeling
 ```
 
 Create python virtual environment
@@ -55,7 +55,7 @@ pip install -r requirements.txt  # install requirements
 
 Start postgres container
 ```
-docker-compose up
+docker-compose up  # run this command in new terminal window or tab
 ```
 
 Run scripts
