@@ -63,5 +63,14 @@ Run scripts
 cd src/
 python -m scripts.create_tables  # create schema
 python -m scripts.etl            # option 1: load data one file per commit
-python -m scripts.bulk_etl       # option 2: bulk copy for each table
+python -m scripts.etl_bulk       # option 2: bulk copy for each table
+```
+
+Check results
+
+```
+jupyter notebook  # launch jupyter notebook app
+
+# The notebook interface will appear in a new browser window or tab.
+# Navigate to src/notebooks/test.ipynb and run the code cells
 ```
