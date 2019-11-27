@@ -11,11 +11,11 @@ time_table_drop = "DROP TABLE IF EXISTS time;"
 songplay_table_create = ("""
     CREATE TABLE songplays (
         songplay_id SERIAL PRIMARY KEY,
-        start_time TIMESTAMP,
+        start_time TIMESTAMP NOT NULL,
         user_id VARCHAR,
         level VARCHAR,
-        song_id VARCHAR,
-        artist_id VARCHAR,
+        song_id VARCHAR NOT NULL,
+        artist_id VARCHAR NOT NULL,
         session_id INT,
         location VARCHAR,
         user_agent varchar 
@@ -25,18 +25,18 @@ songplay_table_create = ("""
 user_table_create = ("""
     CREATE TABLE users (
         user_id VARCHAR PRIMARY KEY,
-        first_name VARCHAR,
-        last_name VARCHAR,
-        gender VARCHAR,
-        level VARCHAR
+        first_name VARCHAR NOT NULL,
+        last_name VARCHAR NOT NULL,
+        gender CHAR,
+        level VARCHAR NOT NULL
     );
 """)
 
 song_table_create = ("""
     CREATE TABLE songs (
         song_id VARCHAR PRIMARY KEY,
-        title VARCHAR,
-        artist_id VARCHAR,
+        title VARCHAR NOT NULL,
+        artist_id VARCHAR NOT NULL,
         year INT,
         duration INT
     );
@@ -45,7 +45,7 @@ song_table_create = ("""
 artist_table_create = ("""
     CREATE TABLE artists (
         artist_id VARCHAR PRIMARY KEY,
-        name VARCHAR,
+        name VARCHAR NOT NULL,
         location VARCHAR,
         latitude FLOAT,
         longitude FLOAT
@@ -55,12 +55,12 @@ artist_table_create = ("""
 time_table_create = ("""
     CREATE TABLE time (
         start_time TIMESTAMP PRIMARY KEY,
-        hour INT,
-        day INT,
-        week INT,
-        month INT,
-        year INT,
-        weekday VARCHAR
+        hour INT NOT NULL,
+        day INT NOT NULL,
+        week INT NOT NULL,
+        month INT NOT NULL,
+        year INT NOT NULL,
+        weekday INT NOT NULL
     );
 """)
 
@@ -75,7 +75,8 @@ user_table_insert = ("""
     INSERT INTO users (user_id, first_name, last_name, gender, level)
     VALUES(%s, %s, %s, %s, %s)
     ON CONFLICT (user_id)
-    DO NOTHING;
+    DO UPDATE
+    SET level = EXCLUDED.level;
 """)
 
 song_table_insert = ("""

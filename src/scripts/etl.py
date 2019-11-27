@@ -52,7 +52,7 @@ def process_log_file(cur, filepath):
     t = pd.to_datetime(df['ts'], unit='ms')
 
     # insert time data records
-    time_data = [(round(dt.timestamp()), dt.hour, dt.day, dt.week, dt.month, dt.year, dt.day_name()) for dt in t]
+    time_data = [(round(dt.timestamp()), dt.hour, dt.day, dt.week, dt.month, dt.year, dt.weekday()) for dt in t]
     column_labels = ('timestamp', 'hour', 'day', 'week', 'month', 'year', 'weekday')
     time_df = pd.DataFrame(time_data, columns=column_labels)
 
@@ -75,9 +75,8 @@ def process_log_file(cur, filepath):
         result = cur.fetchone()
         (song_id, artist_id) = (result if result else (None, None))
 
-        # uncomment if we only want records with valid song_id and artist_id
-        # if song_id is None or artist_id is None:
-        #     continue
+        if song_id is None or artist_id is None:
+            continue
 
         # insert songplay record
         songplay_data = (round(row.ts / 1000.0), row.userId, row.level, song_id, \
